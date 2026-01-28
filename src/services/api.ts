@@ -1,8 +1,19 @@
 import axios from 'axios';
 import type { HistoricalData, Period } from '../types';
 
-// Netlify/Vite 환경변수 우선 사용 (예: VITE_API_URL=https://your-domain.com/api)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const LOCAL_API_BASE_URL = 'http://localhost:3001/api';
+
+/**
+ * 개발 환경: 로컬호스트 고정
+ * 프로덕션: VITE_API_URL 필수 (예: https://your-domain.com/api)
+ */
+const API_BASE_URL = import.meta.env.DEV
+  ? LOCAL_API_BASE_URL
+  : (import.meta.env.VITE_API_URL as string | undefined);
+
+if (import.meta.env.PROD && !API_BASE_URL) {
+  throw new Error('VITE_API_URL 환경변수가 설정되어 있지 않습니다. (예: https://your-domain.com/api)');
+}
 
 export const api = {
   // 환율
