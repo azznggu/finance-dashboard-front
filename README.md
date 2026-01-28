@@ -125,7 +125,7 @@ md:grid-cols-3       /* 데스크톱: 3열 (가상화폐) */
 
 ### API 클라이언트 (services/api.ts)
 ```typescript
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 api.getExchangeRate('USD/KRW', '1day')
 api.getGoldPrice('1week')

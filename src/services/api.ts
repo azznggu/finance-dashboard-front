@@ -1,45 +1,51 @@
 import axios from 'axios';
 import type { HistoricalData, Period } from '../types';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+// Netlify/Vite 환경변수 우선 사용 (예: VITE_API_URL=https://your-domain.com/api)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export const api = {
   // 환율
-  getExchangeRate: async (pair: string, period: Period): Promise<HistoricalData> => {
+  getExchangeRate: async (pair: string, period: Period, signal?: AbortSignal): Promise<HistoricalData> => {
     const response = await axios.get(`${API_BASE_URL}/exchange-rate`, {
-      params: { pair, period }
+      params: { pair, period },
+      signal
     });
     return response.data;
   },
 
   // 금시세
-  getGoldPrice: async (period: Period): Promise<HistoricalData> => {
+  getGoldPrice: async (period: Period, signal?: AbortSignal): Promise<HistoricalData> => {
     const response = await axios.get(`${API_BASE_URL}/gold`, {
-      params: { period }
+      params: { period },
+      signal
     });
     return response.data;
   },
 
   // 가상화폐
-  getCryptoPrice: async (symbol: string, period: Period): Promise<HistoricalData> => {
+  getCryptoPrice: async (symbol: string, period: Period, signal?: AbortSignal): Promise<HistoricalData> => {
     const response = await axios.get(`${API_BASE_URL}/crypto/${symbol}`, {
-      params: { period }
+      params: { period },
+      signal
     });
     return response.data;
   },
 
   // S&P 500
-  getSP500: async (period: Period): Promise<HistoricalData> => {
+  getSP500: async (period: Period, signal?: AbortSignal): Promise<HistoricalData> => {
     const response = await axios.get(`${API_BASE_URL}/sp500`, {
-      params: { period }
+      params: { period },
+      signal
     });
     return response.data;
   },
 
   // 전체 데이터
-  getAllData: async (period: Period) => {
+  getAllData: async (period: Period, signal?: AbortSignal) => {
     const response = await axios.get(`${API_BASE_URL}/all`, {
-      params: { period }
+      params: { period },
+      signal
     });
     return response.data;
   }
