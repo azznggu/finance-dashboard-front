@@ -8,7 +8,11 @@ const LOCAL_API_BASE_URL = 'http://localhost:3001/api';
  * 프로덕션: VITE_API_URL 필수 (예: https://your-domain.com/api)
  */
 const API_BASE_URL = import.meta.env.DEV
-  ? LOCAL_API_BASE_URL
+  ? (
+      import.meta.env.VITE_USE_REMOTE_API === 'true' && import.meta.env.VITE_API_URL
+        ? (import.meta.env.VITE_API_URL as string)
+        : LOCAL_API_BASE_URL
+    )
   : (import.meta.env.VITE_API_URL as string | undefined);
 
 if (import.meta.env.PROD && !API_BASE_URL) {
