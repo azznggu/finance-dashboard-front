@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -58,8 +58,22 @@ function App() {
     sp500: { title: 'S&P 500', data: null, loading: true, unit: 'USD', color: '#10b981' }
   });
 
+  // 중복 호출 방지를 위한 ref
+  const exchangeAbortRef = useRef<AbortController | null>(null);
+  const goldAbortRef = useRef<AbortController | null>(null);
+  const cryptoAbortRef = useRef<AbortController | null>(null);
+  const sp500AbortRef = useRef<AbortController | null>(null);
+
   // 환율 데이터 로딩 함수
   const loadExchangeData = useCallback(async () => {
+    // 이전 요청 취소
+    if (exchangeAbortRef.current) {
+      exchangeAbortRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    exchangeAbortRef.current = abortController;
+
     setSections(prev => ({
       ...prev,
       usdKrw: { ...prev.usdKrw, loading: true },
@@ -68,49 +82,84 @@ function App() {
 
     try {
       const [usdKrw, jpyKrw] = await Promise.all([
-        api.getExchangeRate('USD/KRW', exchangePeriod),
-        api.getExchangeRate('JPY/KRW', exchangePeriod)
+        api.getExchangeRate('USD/KRW', exchangePeriod, abortController.signal),
+        api.getExchangeRate('JPY/KRW', exchangePeriod, abortController.signal)
       ]);
 
-      setSections(prev => ({
-        ...prev,
-        usdKrw: { ...prev.usdKrw, data: usdKrw, loading: false },
-        jpyKrw: { ...prev.jpyKrw, data: jpyKrw, loading: false }
-      }));
-    } catch (error) {
+      // 요청이 취소되지 않았는지 확인
+      if (!abortController.signal.aborted) {
+        setSections(prev => ({
+          ...prev,
+          usdKrw: { ...prev.usdKrw, data: usdKrw, loading: false },
+          jpyKrw: { ...prev.jpyKrw, data: jpyKrw, loading: false }
+        }));
+      }
+    } catch (error: any) {
+      // AbortError는 무시
+      if (error.name === 'AbortError' || abortController.signal.aborted) {
+        return;
+      }
       console.error('환율 데이터 로딩 실패:', error);
-      setSections(prev => ({
-        ...prev,
-        usdKrw: { ...prev.usdKrw, loading: false },
-        jpyKrw: { ...prev.jpyKrw, loading: false }
-      }));
+      if (!abortController.signal.aborted) {
+        setSections(prev => ({
+          ...prev,
+          usdKrw: { ...prev.usdKrw, loading: false },
+          jpyKrw: { ...prev.jpyKrw, loading: false }
+        }));
+      }
     }
   }, [exchangePeriod]);
 
   // 금시세 데이터 로딩 함수
   const loadGoldData = useCallback(async () => {
+    // 이전 요청 취소
+    if (goldAbortRef.current) {
+      goldAbortRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    goldAbortRef.current = abortController;
+
     setSections(prev => ({
       ...prev,
       gold: { ...prev.gold, loading: true }
     }));
 
     try {
-      const gold = await api.getGoldPrice(goldPeriod);
-      setSections(prev => ({
-        ...prev,
-        gold: { ...prev.gold, data: gold, loading: false }
-      }));
-    } catch (error) {
+      const gold = await api.getGoldPrice(goldPeriod, abortController.signal);
+      
+      // 요청이 취소되지 않았는지 확인
+      if (!abortController.signal.aborted) {
+        setSections(prev => ({
+          ...prev,
+          gold: { ...prev.gold, data: gold, loading: false }
+        }));
+      }
+    } catch (error: any) {
+      // AbortError는 무시
+      if (error.name === 'AbortError' || abortController.signal.aborted) {
+        return;
+      }
       console.error('금시세 데이터 로딩 실패:', error);
-      setSections(prev => ({
-        ...prev,
-        gold: { ...prev.gold, loading: false }
-      }));
+      if (!abortController.signal.aborted) {
+        setSections(prev => ({
+          ...prev,
+          gold: { ...prev.gold, loading: false }
+        }));
+      }
     }
   }, [goldPeriod]);
 
   // 가상화폐 데이터 로딩 함수
   const loadCryptoData = useCallback(async () => {
+    // 이전 요청 취소
+    if (cryptoAbortRef.current) {
+      cryptoAbortRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    cryptoAbortRef.current = abortController;
+
     setSections(prev => ({
       ...prev,
       btc: { ...prev.btc, loading: true },
@@ -120,68 +169,119 @@ function App() {
 
     try {
       const [btc, eth, xrp] = await Promise.all([
-        api.getCryptoPrice('BTC', cryptoPeriod),
-        api.getCryptoPrice('ETH', cryptoPeriod),
-        api.getCryptoPrice('XRP', cryptoPeriod)
+        api.getCryptoPrice('BTC', cryptoPeriod, abortController.signal),
+        api.getCryptoPrice('ETH', cryptoPeriod, abortController.signal),
+        api.getCryptoPrice('XRP', cryptoPeriod, abortController.signal)
       ]);
 
-      setSections(prev => ({
-        ...prev,
-        btc: { ...prev.btc, data: btc, loading: false },
-        eth: { ...prev.eth, data: eth, loading: false },
-        xrp: { ...prev.xrp, data: xrp, loading: false }
-      }));
-    } catch (error) {
+      // 요청이 취소되지 않았는지 확인
+      if (!abortController.signal.aborted) {
+        setSections(prev => ({
+          ...prev,
+          btc: { ...prev.btc, data: btc, loading: false },
+          eth: { ...prev.eth, data: eth, loading: false },
+          xrp: { ...prev.xrp, data: xrp, loading: false }
+        }));
+      }
+    } catch (error: any) {
+      // AbortError는 무시
+      if (error.name === 'AbortError' || abortController.signal.aborted) {
+        return;
+      }
       console.error('가상화폐 데이터 로딩 실패:', error);
-      setSections(prev => ({
-        ...prev,
-        btc: { ...prev.btc, loading: false },
-        eth: { ...prev.eth, loading: false },
-        xrp: { ...prev.xrp, loading: false }
-      }));
+      if (!abortController.signal.aborted) {
+        setSections(prev => ({
+          ...prev,
+          btc: { ...prev.btc, loading: false },
+          eth: { ...prev.eth, loading: false },
+          xrp: { ...prev.xrp, loading: false }
+        }));
+      }
     }
   }, [cryptoPeriod]);
 
   // S&P500 데이터 로딩 함수
   const loadSP500Data = useCallback(async () => {
+    // 이전 요청 취소
+    if (sp500AbortRef.current) {
+      sp500AbortRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    sp500AbortRef.current = abortController;
+
     setSections(prev => ({
       ...prev,
       sp500: { ...prev.sp500, loading: true }
     }));
 
     try {
-      const sp500 = await api.getSP500(sp500Period);
-      setSections(prev => ({
-        ...prev,
-        sp500: { ...prev.sp500, data: sp500, loading: false }
-      }));
-    } catch (error) {
+      const sp500 = await api.getSP500(sp500Period, abortController.signal);
+      
+      // 요청이 취소되지 않았는지 확인
+      if (!abortController.signal.aborted) {
+        setSections(prev => ({
+          ...prev,
+          sp500: { ...prev.sp500, data: sp500, loading: false }
+        }));
+      }
+    } catch (error: any) {
+      // AbortError는 무시
+      if (error.name === 'AbortError' || abortController.signal.aborted) {
+        return;
+      }
       console.error('S&P500 데이터 로딩 실패:', error);
-      setSections(prev => ({
-        ...prev,
-        sp500: { ...prev.sp500, loading: false }
-      }));
+      if (!abortController.signal.aborted) {
+        setSections(prev => ({
+          ...prev,
+          sp500: { ...prev.sp500, loading: false }
+        }));
+      }
     }
   }, [sp500Period]);
 
   // 환율 데이터 로딩
   useEffect(() => {
     loadExchangeData();
+    // cleanup: 컴포넌트 언마운트 시 요청 취소
+    return () => {
+      if (exchangeAbortRef.current) {
+        exchangeAbortRef.current.abort();
+      }
+    };
   }, [loadExchangeData]);
 
   // 금시세 데이터 로딩
   useEffect(() => {
     loadGoldData();
+    // cleanup: 컴포넌트 언마운트 시 요청 취소
+    return () => {
+      if (goldAbortRef.current) {
+        goldAbortRef.current.abort();
+      }
+    };
   }, [loadGoldData]);
 
   // 가상화폐 데이터 로딩
   useEffect(() => {
     loadCryptoData();
+    // cleanup: 컴포넌트 언마운트 시 요청 취소
+    return () => {
+      if (cryptoAbortRef.current) {
+        cryptoAbortRef.current.abort();
+      }
+    };
   }, [loadCryptoData]);
 
   // S&P500 데이터 로딩
   useEffect(() => {
     loadSP500Data();
+    // cleanup: 컴포넌트 언마운트 시 요청 취소
+    return () => {
+      if (sp500AbortRef.current) {
+        sp500AbortRef.current.abort();
+      }
+    };
   }, [loadSP500Data]);
 
   const renderPeriodButtons = (currentPeriod: Period, onChange: (p: Period) => void) => {
